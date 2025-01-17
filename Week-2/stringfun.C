@@ -53,37 +53,25 @@ int count_words(char *str){
     bool word_start;
 
     // Please implement
-    bool word_start = false;
+    word_start = false;
 
     wc = 0;
 
     len = strlen(str);
-    for (i = 0; i < len; i++)
-    {
-        char current_char = str[i];
-        if(word_start == false){
-            if (current_char == SPACE_CHAR)
-            {
-                continue;
-            }
-            else
-            {
-                w++;
+    for (int i = 0; i < len; i++) {
+        if(!word_start){
+            if (str[i] != SPACE_CHAR) {
+                wc++;
                 word_start = true;
             }
-        else if (word_start == true)
-        {
-            if (current_char = SPACE_CHAR)
-            {
+        } else {
+            if (str[i] == SPACE_CHAR) {
                 word_start = false;
-            }    
-        }
-        return wc;
-        
+            }
         }
     }
-    
-    return 0;
+
+    return wc;
 }
 
 //reverse_string() algorithm
@@ -103,34 +91,24 @@ int count_words(char *str){
 //  3. When the loop above terminates, the string should be reversed in place
 void  reverse_string(char *str){
     // Suggested local variables
+    int len = strlen(str);
     int end_idx;        //should be length of string - 1
     int start_idx;
     char tmp_char;
 
     // Please implement
     start_idx = 0;
-    end_idx = strlen(str) - 1;
+    end_idx = len - 1;
 
-    while (end_idx > start_idx)
-    {
-        char temp = str[start_idx];
+    while (end_idx > start_idx) {
+        tmp_char = str[start_idx];
         str[start_idx] = str[end_idx];
-        str[end_idx] = temp;
+        str[end_idx] = tmp_char;
         
         start_idx++;
         end_idx--;
     }
     
-}
-//  3. When the loop above terminates, the string should be reversed in place
-int main(){
-    char str[] = "Hello, World!";
-    printf("Original String: %s\n", str);
-
-    reverse_string(str);
-    printf("Reversed String: %s\n", str);
-
-    return 0;
 }
 
 //word_print() - algorithm
@@ -171,48 +149,38 @@ int main(){
 void  word_print(char *str){
     //suggested local variables
     int len = strlen(str);            //length of string - aka strlen(str);
-    int last_char_idx = len - 1;  //index of last char - strlen(str)-1;
     int wc = 0;         //counts words
     int wlen = 0;       //length of current word
     bool word_start = false;    //am I at the start of a new word
 
     // Please implement
-    printf("Word Print\n");
-    printf("----------\n");
+    printf("Word Print\n--------\n");
 
-    for (int i = 0; i < len; i++)
-    {
-        if (!word_start && str[i] != SPACE_CHAR)
-        {
-            wc++;
-            word_start = true;
-            wlen = 0;
-            printf("%d. ",wc);
-        }
-        
-        if (word_start)
-        {
-            if (str[i] != SPACE_CHAR)
-            {
-                putchar(str[i]);
-                wlen++;
+    for (int i = 0; i < len; i++) {
+        if (!word_start) {
+            if (str[i] != SPACE_CHAR) {
+                wc++;
+                word_start = true;
+                wlen = 1;
+                printf("%d. ",wc);
+                printf("%c", str[i]);
             }
-
-            if (str[i] == SPACE_CHAR || i == last_char_idx)
-            {
+        } else {
+            if (str[i] != SPACE_CHAR) {
+                wlen++;
+                printf("%c", str[i]);
+            } else {
                 printf("(%d)\n", wlen);
                 word_start = false;
                 wlen = 0;
-            }    
+                }
+            } 
+        }
+
+        if (word_start){
+            printf("(%d)\n", wlen);
         }
     }
-}
-
-int main(){
-    char input[] = "C programming is fun";
-    word_print(input);
-    return 0;
-}
 
 int main(int argc, char *argv[]){
     char *input_string;     //holds the string provided by the user on cmd line
@@ -252,7 +220,7 @@ int main(int argc, char *argv[]){
     //is the third arg or in arv[2]
     
     switch (opt){
-        case 'c':{
+        case 'c':
             int wc = 0;         //variable for the word count
 
             //TODO: #2. Call count_words, return of the result
@@ -260,7 +228,6 @@ int main(int argc, char *argv[]){
             wc = count_words(input_string);
             printf("Word Count: %d\n", wc);
             break;
-        }
         case 'r':
             //TODO: #3. Call reverse string using input_string
             //          input string should be reversed
@@ -281,14 +248,13 @@ int main(int argc, char *argv[]){
 
             break;
         
-        case 'w':{
+        case 'w':
             printf("Word Print\n----------\n");
 
             //TODO: #5. Call word_print, output should be
             //          printed by that function
             word_print(input_string);
             break;
-        }
         //TODO: #6. What is the purpose of the default option here?
         //          Please describe replacing this TODO comment with
         //          your thoughts.
@@ -298,11 +264,10 @@ int main(int argc, char *argv[]){
         //gracefully by displaying the usage information and 
         //providing feedback about the invalid option. 
         //This prevents undefined behavior.
-        default:{
+        default:
             usage(argv[0]);
             printf("Invalid option %c provided, exiting!\n", opt);
             exit(1);
-        }
     }
     //TODO: #7. Why did we place a break statement on each case
     //          option, and did not place one on default.  What
