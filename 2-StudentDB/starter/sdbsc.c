@@ -380,34 +380,36 @@ void print_student(student_t *s){
  *            
  */
 int compress_db(int fd){
+    
     int tmp_fd = open(TMP_DB_FILE, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-    if (tmp_fd == -1)
-    {
-        printf(M_ERR_DB_OPEN);
+    if (tmp_fd == -1) {
+        perror(M_ERR_DB_OPEN);  
         return ERR_DB_FILE;
     }
 
     student_t student = {0};
 
-    while (read(fd, &student, sizeof(student_t)) > 0)
-    {
-        if (memcmp(&student, &EMPTY_STUDENT_RECORD, sizeof(student_t)) != 0)
-        {
-            write(tmp_fd, &student, sizeof(student_t));
+    while (read(fd, &student, sizeof(student_t)) > 0) {
+        if (memcmp(&student, &EMPTY_STUDENT_RECORD, sizeof(student_t)) != 0) {
+            if (write(tmp_fd, &student, sizeof(student_t)) == -1) {
+                perror("Error writing to temporary database file");
+                close(tmp_fd);
+                close(fd);
+                return ERR_DB_FILE;
+            }
         }
     }
 
     close(fd);
-    if (rename(TMP_DB_FILE, DB_FILE) == -1)
-    {
-        printf(M_ERR_DB_CREATE);
+
+    if (rename(TMP_DB_FILE, DB_FILE) == -1) {
+        perror(M_ERR_DB_CREATE);  
         return ERR_DB_FILE;
     }
 
     tmp_fd = open(DB_FILE, O_RDWR, S_IRUSR | S_IWUSR);
-    if (tmp_fd == -1)
-    {
-        printf(M_ERR_DB_OPEN);
+    if (tmp_fd == -1) {
+        perror(M_ERR_DB_OPEN);  
         return ERR_DB_FILE;
     }
 
