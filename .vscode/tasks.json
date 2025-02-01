@@ -11,8 +11,10 @@
         },
         "options": {
           "cwd": "${fileDirname}"
-      },
-        "problemMatcher": ["$gcc"],
+        },
+        "problemMatcher": [
+          "$gcc"
+        ],
         "detail": "Runs the 'make' command to build the project."
       }
     ]
