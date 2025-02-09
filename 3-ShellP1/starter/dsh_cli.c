@@ -44,12 +44,42 @@
  *
  *  See the provided test cases for output expectations.
  */
-int main()
-{
-    char *cmd_buff;
-    int rc = 0;
+int main() {
+    char cmd_buff[SH_CMD_MAX];
     command_list_t clist;
 
-    printf(M_NOT_IMPL);
-    exit(EXIT_NOT_IMPL);
-}
+    while (1) {
+        // Display shell prompt
+        printf("%s", SH_PROMPT);
+
+        // Read user input
+        if (fgets(cmd_buff, SH_CMD_MAX, stdin) == NULL) {
+            printf("\n");  // Handle EOF (Ctrl+D)
+            break;
+        }
+
+        // Remove trailing newline
+        cmd_buff[strcspn(cmd_buff, "\n")] = '\0';
+
+        // Check if user wants to exit
+        if (strcmp(cmd_buff, EXIT_CMD) == 0) {
+            break;
+        }
+
+        // Parse input command(s)
+        int result = build_cmd_list(cmd_buff, &clist);
+
+        if (result == OK) {
+            // Print parsed commands
+            printf(CMD_OK_HEADER, clist.num);
+            for (int i = 0; i < clist.num; i++) {
+                printf("<%d> %s %s\n", i + 1, clist.commands[i].exe, clist.commands[i].args);
+            }
+        } else if (result == WARN_NO_CMDS) {
+            printf(CMD_WARN_NO_CMD);
+        } else if (result == ERR_TOO_MANY_COMMANDS) {
+            printf(CMD_ERR_PIPE_LIMIT, CMD_MAX);
+        }
+    }
+
+    return 0;}

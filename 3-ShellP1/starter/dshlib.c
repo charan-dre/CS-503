@@ -34,6 +34,45 @@
  */
 int build_cmd_list(char *cmd_line, command_list_t *clist)
 {
-    printf(M_NOT_IMPL);
-    return EXIT_NOT_IMPL;
+    if (cmd_line == NULL || strlen(cmd_line) == 0) {
+        return WARN_NO_CMDS;
+    }
+
+    char *token;
+    char *rest = cmd_line;  // Corrected variable name
+    clist->num = 0;
+
+    while ((token = strtok_r(rest, PIPE_STRING, &rest))) {
+        if (clist->num >= CMD_MAX) {
+            return ERR_TOO_MANY_COMMANDS;
+        }
+
+        // Trim leading and trailing spaces
+        while (*token == SPACE_CHAR) token++;  // Skip leading spaces
+        char *end = token + strlen(token) - 1;
+        while (end > token && *end == SPACE_CHAR)*end-- = '\0';  // Remove trailing spaces
+
+        // Extract executable (first word) and arguments (remaining words)
+        char *exe = strtok(token, " ");
+        char *args = strtok(NULL, "");  // Rest of the line after the first space
+
+        if (exe == NULL) {
+            continue;  // Ignore empty commands
+        }
+
+        // Store command and arguments safely
+        strncpy(clist->commands[clist->num].exe, exe, EXE_MAX - 1);
+        clist->commands[clist->num].exe[EXE_MAX - 1] = '\0';
+
+        if (args) {
+            strncpy(clist->commands[clist->num].args, args, ARG_MAX - 1);
+            clist->commands[clist->num].args[ARG_MAX - 1] = '\0';
+        } else {
+            clist->commands[clist->num].args[0] = '\0';  // Ensure empty args field
+        }
+
+        clist->num++;
+    }
+
+    return OK;
 }
