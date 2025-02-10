@@ -47,7 +47,7 @@
 int main() {
     char cmd_buff[SH_CMD_MAX];
     command_list_t clist;
-
+    
     while (1) {
         printf("%s", SH_PROMPT);
 
@@ -55,11 +55,18 @@ int main() {
             printf("\n");  
             break;
         }
-
+        //remove the trailing \n from cmd_buff
         cmd_buff[strcspn(cmd_buff, "\n")] = '\0';
 
+        //IMPLEMENT THE REST OF THE REQUIREMENTS
+        
         if (strcmp(cmd_buff, EXIT_CMD) == 0) {
             break;
+        }
+
+        if (strcmp(cmd_buff, "/dragon") == 0) {
+            print_dragon();  
+            continue;
         }
 
         int result = build_cmd_list(cmd_buff, &clist);
@@ -76,4 +83,5 @@ int main() {
         }
     }
 
-    return 0;}
+    return 0;
+}
