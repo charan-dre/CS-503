@@ -69,7 +69,7 @@ int free_cmd_buff(cmd_buff_t *cmd_buff) {
         cmd_buff->_cmd_buffer = NULL;
     }
     for (int i = 0; i < cmd_buff->argc; i++) {
-        free(cmd_buff->argv[i]);  // Free dynamically allocated argument strings
+        free(cmd_buff->argv[i]);  
     }
     return OK;
 }
@@ -157,24 +157,23 @@ int exec_cmd(cmd_buff_t *cmd) {
         last_return_code = ERR_EXEC_CMD;
         return ERR_EXEC_CMD;
     } 
-    else if (pid == 0) {  // Child process
+    else if (pid == 0) {  
         execvp(cmd->argv[0], cmd->argv);
 
-        // Capture the exact error code
         int error_code = errno;
         switch (error_code) {
             case ENOENT:
                 fprintf(stderr, "Command not found in PATH\n");
-                _exit(127);  // Restore 127 for "command not found"
+                _exit(127);  
             case EACCES:
                 fprintf(stderr, "Error: Permission denied for '%s'\n", cmd->argv[0]);
-                _exit(126);  // Permission denied
+                _exit(126);  
             default:
                 fprintf(stderr, "Error: Failed to execute '%s' (errno: %d)\n", cmd->argv[0], error_code);
                 _exit(error_code);
         }
     } 
-    else {  // Parent process
+    else {  
         int status;
         waitpid(pid, &status, 0);
         if (WIFEXITED(status)) {
@@ -198,7 +197,7 @@ int exec_local_cmd_loop() {
         if (fgets(cmd_line, SH_CMD_MAX, stdin) == NULL) {
             break;
         }
-        cmd_line[strcspn(cmd_line, "\n")] = 0; // Remove newline
+        cmd_line[strcspn(cmd_line, "\n")] = 0; 
          
         if (build_cmd_buff(cmd_line, &cmd_buff) != OK) {
             fprintf(stderr, "Error processing command\n");
