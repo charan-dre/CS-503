@@ -72,7 +72,6 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
 
         clist->commands[clist->num].argc = 0;
 
-        // Handle redirection within existing structure
         char *redirect = strstr(token, ">>");
         char *output_file = NULL;
         int is_append = 0;
@@ -89,7 +88,7 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
         }
 
         char *arg = strtok(token, " ");
-        while (arg && clist->commands[clist->num].argc < CMD_ARGV_MAX - 2) {  // Leave space for redirection
+        while (arg && clist->commands[clist->num].argc < CMD_ARGV_MAX - 2) {  
             if (strcmp(arg, "grep") == 0) {
                 clist->commands[clist->num].argv[clist->commands[clist->num].argc++] = strdup(arg);
                 arg = strtok(NULL, " ");
@@ -102,7 +101,6 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
             arg = strtok(NULL, " ");
         }
 
-        // Add redirection information to argv if present
         if (output_file) {
             clist->commands[clist->num].argv[clist->commands[clist->num].argc++] = strdup(is_append ? ">>" : ">");
             clist->commands[clist->num].argv[clist->commands[clist->num].argc++] = strdup(output_file);
@@ -156,7 +154,6 @@ int execute_pipeline(command_list_t *clist) {
                 dup2(pipes[i][1], STDOUT_FILENO);
             }
 
-            // Handle redirection using existing argv
             for (int j = 0; j < clist->commands[i].argc - 1; j++) {
                 if (strcmp(clist->commands[i].argv[j], ">") == 0 ||
                     strcmp(clist->commands[i].argv[j], ">>") == 0) {
@@ -170,8 +167,7 @@ int execute_pipeline(command_list_t *clist) {
                     }
                     dup2(fd, STDOUT_FILENO);
                     close(fd);
-                    
-                    // Remove redirection arguments
+
                     clist->commands[i].argv[j] = NULL;
                     break;
                 }
