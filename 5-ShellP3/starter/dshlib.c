@@ -66,51 +66,139 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
             return ERR_TOO_MANY_COMMANDS;
         }
 
-        while (*token == SPACE_CHAR) token++;  // Skip leading spaces
+        while (*token == SPACE_CHAR) token++;
         char *end = token + strlen(token) - 1;
-        while (end > token && *end == SPACE_CHAR) *end-- = '\0';  // Trim trailing spaces
+        while (end > token && *end == SPACE_CHAR) *end-- = '\0';
 
         clist->commands[clist->num].argc = 0;
+
+        // Handle redirection within existing structure
+        char *redirect = strstr(token, ">>");
+        char *output_file = NULL;
+        int is_append = 0;
+        
+        if (redirect) {
+            *redirect = '\0';
+            output_file = redirect + 2;
+            while (*output_file == ' ') output_file++;
+            is_append = 1;
+        } else if ((redirect = strchr(token, '>'))) {
+            *redirect = '\0';
+            output_file = redirect + 1;
+            while (*output_file == ' ') output_file++;
+        }
+
         char *arg = strtok(token, " ");
-        while (arg && clist->commands[clist->num].argc < CMD_ARGV_MAX - 1) {
-            // Ensure "grep" is recognized as a command
+        while (arg && clist->commands[clist->num].argc < CMD_ARGV_MAX - 2) {  // Leave space for redirection
             if (strcmp(arg, "grep") == 0) {
-                clist->commands[clist->num].argv[clist->commands[clist->num].argc] = strdup(arg);
-                clist->commands[clist->num].argc++;
-
-                arg = strtok(NULL, " "); // Move to next argument
-
-                // *Fix grep argument handling*
-                if (arg && arg[0] == '"' && arg[strlen(arg) - 1] == '"') { 
-                    arg[strlen(arg) - 1] = '\0';  // Remove ending quote
-                    arg++;  // Move past the starting quote
+                clist->commands[clist->num].argv[clist->commands[clist->num].argc++] = strdup(arg);
+                arg = strtok(NULL, " ");
+                if (arg && arg[0] == '"' && arg[strlen(arg) - 1] == '"') {
+                    arg[strlen(arg) - 1] = '\0';
+                    arg++;
                 }
             }
-
-            clist->commands[clist->num].argv[clist->commands[clist->num].argc] = strdup(arg);
-            clist->commands[clist->num].argc++;
+            clist->commands[clist->num].argv[clist->commands[clist->num].argc++] = strdup(arg);
             arg = strtok(NULL, " ");
         }
 
+        // Add redirection information to argv if present
+        if (output_file) {
+            clist->commands[clist->num].argv[clist->commands[clist->num].argc++] = strdup(is_append ? ">>" : ">");
+            clist->commands[clist->num].argv[clist->commands[clist->num].argc++] = strdup(output_file);
+        }
+        
         clist->commands[clist->num].argv[clist->commands[clist->num].argc] = NULL;
         clist->num++;
     }
-
     return OK;
 }
+
 int free_cmd_list(command_list_t *clist) {
     if (!clist) return ERR_MEMORY;
-
+    
     for (int i = 0; i < clist->num; i++) {
         for (int j = 0; j < clist->commands[i].argc; j++) {
             free(clist->commands[i].argv[j]);
         }
     }
     clist->num = 0;
-
     return OK;
 }
 
+int execute_pipeline(command_list_t *clist) {
+    int num_cmds = clist->num;
+    if (num_cmds < 1) return ERR_CMD_ARGS_BAD;
+    if (num_cmds > CMD_MAX) return ERR_TOO_MANY_COMMANDS;
+
+    int pipes[num_cmds - 1][2];
+    pid_t pids[num_cmds];
+
+    for (int i = 0; i < num_cmds - 1; i++) {
+        if (pipe(pipes[i]) == -1) {
+            perror("pipe error");
+            return ERR_EXEC_CMD;
+        }
+    }
+
+    for (int i = 0; i < num_cmds; i++) {
+        pids[i] = fork();
+        if (pids[i] == -1) {
+            perror("fork error");
+            return ERR_EXEC_CMD;
+        }
+
+        if (pids[i] == 0) {
+            if (i > 0) {
+                dup2(pipes[i - 1][0], STDIN_FILENO);
+            }
+            if (i < num_cmds - 1) {
+                dup2(pipes[i][1], STDOUT_FILENO);
+            }
+
+            // Handle redirection using existing argv
+            for (int j = 0; j < clist->commands[i].argc - 1; j++) {
+                if (strcmp(clist->commands[i].argv[j], ">") == 0 ||
+                    strcmp(clist->commands[i].argv[j], ">>") == 0) {
+                    int flags = O_WRONLY | O_CREAT;
+                    flags |= (strcmp(clist->commands[i].argv[j], ">>") == 0) ? O_APPEND : O_TRUNC;
+                    
+                    int fd = open(clist->commands[i].argv[j + 1], flags, 0644);
+                    if (fd < 0) {
+                        perror("open");
+                        exit(1);
+                    }
+                    dup2(fd, STDOUT_FILENO);
+                    close(fd);
+                    
+                    // Remove redirection arguments
+                    clist->commands[i].argv[j] = NULL;
+                    break;
+                }
+            }
+
+            for (int j = 0; j < num_cmds - 1; j++) {
+                close(pipes[j][0]);
+                close(pipes[j][1]);
+            }
+
+            execvp(clist->commands[i].argv[0], clist->commands[i].argv);
+            perror("execvp error");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    for (int i = 0; i < num_cmds - 1; i++) {
+        close(pipes[i][0]);
+        close(pipes[i][1]);
+    }
+
+    for (int i = 0; i < num_cmds; i++) {
+        waitpid(pids[i], NULL, 0);
+    }
+
+    return OK;
+}
 int exec_local_cmd_loop() {
     char input[SH_CMD_MAX];
     command_list_t clist;
@@ -121,7 +209,7 @@ int exec_local_cmd_loop() {
             printf("\n");
             break;
         }
-        
+
         input[strcspn(input, "\n")] = '\0';
 
         if (strcmp(input, "exit") == 0) {
@@ -143,72 +231,6 @@ int exec_local_cmd_loop() {
 
         execute_pipeline(&clist);
         free_cmd_list(&clist);
-    }
-
-    return OK;
-}
-
-int execute_pipeline(command_list_t *clist) {
-    int num_cmds = clist->num;
-    if (num_cmds < 1) {
-        fprintf(stderr, "Warning: No valid commands received.\n");
-        return ERR_CMD_ARGS_BAD;
-    }
-    if (num_cmds > CMD_MAX) {
-        fprintf(stderr, "Error: Too many commands in pipeline (max: %d).\n", CMD_MAX);
-        return ERR_TOO_MANY_COMMANDS;
-    }
-
-    int pipes[num_cmds - 1][2];
-    pid_t pids[num_cmds];
-
-    // Create pipes
-    for (int i = 0; i < num_cmds - 1; i++) {
-        if (pipe(pipes[i]) == -1) {
-            perror("pipe error");
-            return ERR_EXEC_CMD;
-        }
-    }
-
-    // Fork and execute each command
-    for (int i = 0; i < num_cmds; i++) {
-        pids[i] = fork();
-        if (pids[i] == -1) {
-            perror("fork error");
-            return ERR_EXEC_CMD;
-        }
-
-        if (pids[i] == 0) { // Child process
-            // Redirect input from previous pipe
-            if (i > 0) {
-                dup2(pipes[i - 1][0], STDIN_FILENO);
-            }
-            // Redirect output to next pipe
-            if (i < num_cmds - 1) {
-                dup2(pipes[i][1], STDOUT_FILENO);
-            }
-
-            // Close all pipes in child
-            for (int j = 0; j < num_cmds - 1; j++) {
-                close(pipes[j][0]);
-                close(pipes[j][1]);
-            }
-
-            execvp(clist->commands[i].argv[0], clist->commands[i].argv);
-            perror("execvp error");
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    // Close all pipes in parent
-    for (int i = 0; i < num_cmds - 1; i++) {
-        close(pipes[i][0]);
-        close(pipes[i][1]);
-    }
-
-    // Wait for all child processes
-    for (int i = 0; i < num_cmds; i++) {
-        waitpid(pids[i], NULL, 0);
     }
 
     return OK;
