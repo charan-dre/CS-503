@@ -148,14 +148,17 @@ Guessed mode: HYBRID (4)
 Observe the output and answer these questions:
 
 - What is your UID in the new user namespace?
+
     0
 
 - What capabilities do you have in the user namespace?
+
     cap_chown, cap_dac_override, cap_dac_read_search, cap_fowner, cap_fsetid, cap_kill, cap_setgid, cap_setuid, cap_setpcap, cap_linux_immutable, cap_net_bind_service, cap_net_broadcast, cap_net_admin, cap_net_raw, cap_ipc_lock, cap_ipc_owner, cap_sys_module, cap_sys_rawio, cap_sys_chroot, cap_sys_ptrace, cap_sys_pacct, cap_sys_admin, cap_sys_boot, cap_sys_nice, cap_sys_resource, cap_sys_time, cap_sys_tty_config, cap_mknod, cap_lease, cap_audit_write, cap_audit_control, cap_setfcap, cap_mac_override, cap_mac_admin, cap_syslog, cap_wake_alarm, cap_block_suspend, cap_audit_read, cap_perfmon, cap_bpf, cap_checkpoint_restore
 
     Full set of capabilities, but restricted to the namespace.
 
 - How do the UID mappings work?
+
     The namespace UID 0 is mapped to a non-root UID (e.g., 1000) in the parent namespace, ensuring privilege isolation.
 
 ## Part 3: Exploring Isolation with User Namespaces
